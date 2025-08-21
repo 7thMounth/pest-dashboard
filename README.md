@@ -24,54 +24,56 @@ Pest Dashboard is a web application for testing and monitoring API endpoints wit
 
 ## Installation
 
-1. Clone the repository:
+1. Clone the repository and navigate to the project directory:
    ```bash
    git clone https://github.com/yourusername/pest-dashboard.git
    cd pest-dashboard
    ```
 
-2. Install PHP dependencies:
+2. Install dependencies:
    ```bash
+   # Install PHP dependencies
    composer install
-   ```
-
-3. Install JavaScript dependencies:
-   ```bash
+   
+   # Install JavaScript dependencies
    npm install
    ```
 
-4. Copy the environment file and generate application key:
+3. Set up the environment:
    ```bash
+   # Copy the example environment file
    cp .env.example .env
+   
+   # Generate application key
    php artisan key:generate
    ```
 
-5. Configure your database settings in the `.env` file:
-   ```env
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=laravel
-   DB_USERNAME=root
-   DB_PASSWORD=
+4. Configure the database (SQLite is used by default):
+   ```bash
+   # Create the SQLite database file
+   touch database/database.sqlite
+   
+   # Update .env to use SQLite
+   echo "DB_CONNECTION=sqlite" >> .env
+   echo "DB_DATABASE=$(pwd)/database/database.sqlite" >> .env
    ```
 
-6. Run database migrations:
+5. Run database migrations:
    ```bash
    php artisan migrate
    ```
 
-7. Build frontend assets:
+6. Build the frontend assets:
    ```bash
    npm run build
    ```
 
-8. Start the development server:
+7. Start the development server:
    ```bash
    php artisan serve
    ```
 
-9. Visit `http://localhost:8000` in your browser.
+8. Open your browser and visit: [http://localhost:8000](http://localhost:8000)
 
 ## Usage
 
