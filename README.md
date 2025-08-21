@@ -19,7 +19,7 @@ Pest Dashboard is a web application for testing and monitoring API endpoints wit
 
 - PHP 8.1 or higher
 - Composer
-- MySQL 5.7+ or MariaDB 10.3+
+- SQLite 3.8.8+ (Built-in database, no separate installation needed)
 - Node.js 16+ and NPM (for frontend assets)
 
 ## Installation
