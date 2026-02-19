@@ -198,14 +198,28 @@
                                 <thead>
                                     <tr>
                                         <th>#</th>
+                                        <th>Status</th>
                                         <th>Response Time (s)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @if($paginatedResponseTimes->count() > 0)
-                                        @foreach($paginatedResponseTimes as $index => $time)
+                                        @foreach($paginatedResponseTimes as $index => $item)
+                                            @php
+                                                $isStruct = is_array($item);
+                                                $time = $isStruct ? $item['time'] : $item;
+                                                $status = $isStruct ? $item['status'] : null;
+                                                $isSuccess = in_array($status, [200, 201]);
+                                            @endphp
                                         <tr>
                                             <td>{{ ($paginatedResponseTimes->currentPage() - 1) * $paginatedResponseTimes->perPage() + $loop->iteration }}</td>
+                                            <td>
+                                                @if($status)
+                                                    <span class="w3-tag {{ $isSuccess ? 'w3-green' : 'w3-red' }} w3-round-small">{{ $status }}</span>
+                                                @else
+                                                    <span class="w3-text-grey">-</span>
+                                                @endif
+                                            </td>
                                             <td class="w3-monospace">{{ is_numeric($time) ? number_format($time, 4) : 'N/A' }}</td>
                                         </tr>
                                         @endforeach
@@ -271,9 +285,13 @@
         </div>
     </div>
 </div>
+
+
+
 @endsection
 
 @push('scripts')
+
 <script>
     function updateQueryStringParameter(uri, key, value) {
         const re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");

@@ -30,6 +30,7 @@ class TestResult extends Model
         'error_details',
         'status',
         'progress',
+        'timeout',
     ];
 
     /**
@@ -50,6 +51,7 @@ class TestResult extends Model
         'failed_requests' => 'integer',
         'average_response_time' => 'float',
         'progress' => 'integer',
+        'timeout' => 'integer',
     ];
 
     /**

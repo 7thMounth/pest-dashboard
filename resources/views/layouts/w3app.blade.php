@@ -52,55 +52,102 @@
         .w3-theme-d5 {color:#fff !important; background-color:#2e4d07 !important;}
         .w3-text-theme {color:#4CAF50 !important;}
         .w3-hover-theme:hover {color:#fff !important; background-color:#4CAF50 !important;}
+        .w3-text-truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+        }
     </style>
     
     @stack('styles')
 </head>
 <body class="w3-light-grey">
-    <!-- Navbar -->
-    <div class="w3-top">
-        <div class="w3-bar w3-theme w3-card w3-left-align w3-large">
-            <a href="{{ url('/') }}" class="w3-bar-item w3-button w3-padding-large w3-theme-d1">
-                <i class="fa fa-home w3-margin-right"></i>Pest Dashboard
-            </a>
-            <a href="{{ route('test-results.index') }}" class="w3-bar-item w3-button w3-hide-small w3-padding-large w3-hover-white {{ request()->is('test-results*') ? 'w3-white w3-text-theme' : '' }}" title="Test Results">
-                <i class="fa fa-tasks w3-margin-right"></i>Test Results
-            </a>
-        </div>
+
+<!-- Top container -->
+<div class="w3-bar w3-top w3-black w3-large" style="z-index:4">
+  <button class="w3-bar-item w3-button w3-hide-large w3-hover-none w3-hover-text-light-grey" onclick="w3_open();"><i class="fa fa-bars"></i>  Menu</button>
+  <span class="w3-bar-item w3-right">Pest Dashboard</span>
+</div>
+
+<!-- Sidebar/menu -->
+<nav class="w3-sidebar w3-collapse w3-white w3-animate-left" style="z-index:3;width:300px;" id="mySidebar"><br>
+  <div class="w3-container w3-row">
+    <div class="w3-col s4">
+      <img src="https://www.w3schools.com/w3images/avatar2.png" class="w3-circle w3-margin-right" style="width:46px">
     </div>
-
-    <!-- Main content -->
-    <div class="w3-main" style="margin-top:43px; margin-left: 0;">
-        <div class="w3-container w3-padding-16">
-            @if(session('success'))
-                <div class="w3-panel w3-green w3-display-container w3-card-4">
-                    <span onclick="this.parentElement.style.display='none'"
-                    class="w3-button w3-green w3-large w3-display-topright">&times;</span>
-                    <p>{{ session('success') }}</p>
-                </div>
-            @endif
-
-            @if($errors->any())
-                <div class="w3-panel w3-red w3-display-container w3-card-4">
-                    <span onclick="this.parentElement.style.display='none'"
-                    class="w3-button w3-red w3-large w3-display-topright">&times;</span>
-                    <h3>Error!</h3>
-                    <ul>
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            @yield('content')
-        </div>
+    <div class="w3-col s8 w3-bar">
+      <span>Welcome, <strong>Testers</strong></span><br>
     </div>
+  </div>
+  <hr>
+  <div class="w3-container">
+    <h5>Dashboard</h5>
+  </div>
+  <div class="w3-bar-block">
+    <a href="#" class="w3-bar-item w3-button w3-padding-16 w3-hide-large w3-dark-grey w3-hover-black" onclick="w3_close()" title="close menu"><i class="fa fa-remove fa-fw"></i>  Close Menu</a>
+    <a href="{{ route('test-results.index') }}" class="w3-bar-item w3-button w3-padding {{ request()->routeIs('test-results.index') ? 'w3-blue' : '' }}"><i class="fa fa-dashboard fa-fw"></i>  Overview</a>
+    <a href="{{ route('test-results.bulk.create') }}" class="w3-bar-item w3-button w3-padding {{ request()->routeIs('test-results.bulk.create') ? 'w3-blue' : '' }}"><i class="fa fa-list fa-fw"></i>  Bulk Test</a>
+  </div>
+</nav>
 
-    <script>
-        // Sidebar related functions removed
-    </script>
-    
-    @stack('scripts')
+
+<!-- Overlay effect when opening sidebar on small screens -->
+<div class="w3-overlay w3-hide-large w3-animate-opacity" onclick="w3_close()" style="cursor:pointer" title="close side menu" id="myOverlay"></div>
+
+<!-- !PAGE CONTENT! -->
+<div class="w3-main" style="margin-left:300px;margin-top:43px;">
+
+  <!-- Header -->
+  <header class="w3-container" style="padding-top:22px">
+    <h5><b><i class="fa fa-dashboard"></i> My Dashboard</b></h5>
+  </header>
+
+  @if(session('success'))
+    <div class="w3-panel w3-green w3-display-container w3-card-4 w3-margin">
+        <span onclick="this.parentElement.style.display='none'"
+        class="w3-button w3-green w3-large w3-display-topright">&times;</span>
+        <p>{{ session('success') }}</p>
+    </div>
+  @endif
+
+  @yield('content')
+
+  <!-- Footer -->
+  <footer class="w3-container w3-padding-16 w3-light-grey">
+    <h4></h4>
+    <p>Powered by <a href="https://www.w3schools.com/w3css/default.asp" target="_blank">w3.css</a></p>
+  </footer>
+
+  <!-- End page content -->
+</div>
+
+<script>
+// Get the Sidebar
+var mySidebar = document.getElementById("mySidebar");
+
+// Get the DIV with overlay effect
+var overlayBg = document.getElementById("myOverlay");
+
+// Toggle between showing and hiding the sidebar, and add overlay effect
+function w3_open() {
+  if (mySidebar.style.display === 'block') {
+    mySidebar.style.display = 'none';
+    overlayBg.style.display = "none";
+  } else {
+    mySidebar.style.display = 'block';
+    overlayBg.style.display = "block";
+  }
+}
+
+// Close the sidebar with the close button
+function w3_close() {
+  mySidebar.style.display = "none";
+  overlayBg.style.display = "none";
+}
+</script>
+
+@stack('scripts')
+
 </body>
 </html>

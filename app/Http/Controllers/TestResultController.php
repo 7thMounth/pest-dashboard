@@ -36,16 +36,54 @@ class TestResultController extends Controller
         }
         
         // Apply sorting and pagination
-        $testResults = $query->sortable(['created_at' => 'desc'])
-            ->orderBy('created_at', 'desc')
+        $testResults = $query->sortable(['id' => 'desc'])
             ->paginate($perPage)
             ->withQueryString();
+        
+        // Ensure that if no sort is provided, we still get DESC order
+        if (!$request->has('sort')) {
+            $testResults->setCollection($testResults->getCollection()->sortByDesc('id'));
+        }
+        
+        // Calculate statistics for the dashboard based on filtered query
+        $statsQuery = TestResult::query();
+        if ($startDate) $statsQuery->whereDate('created_at', '>=', $startDate);
+        if ($endDate) $statsQuery->whereDate('created_at', '<=', $endDate);
+
+        $totalTests = (clone $statsQuery)->count();
+        
+        // Count tests that failed completely or had failed requests
+        $failedTests = (clone $statsQuery)->where(function($q) {
+            $q->where('status', TestResult::STATUS_FAILED)
+              ->orWhere('failed_requests', '>', 0);
+        })->count();
+        
+        // Use SUMs for weighted averages (more accurate)
+        $totals = (clone $statsQuery)->where('status', TestResult::STATUS_COMPLETED)
+            ->selectRaw('
+                SUM(successful_requests) as success, 
+                SUM(total_requests) as total,
+                SUM(average_response_time * successful_requests) as total_time
+            ')
+            ->first();
+        
+        $successRate = ($totals && $totals->total > 0) 
+            ? ($totals->success / $totals->total) * 100 
+            : 0;
+
+        $avgResponseTime = ($totals && $totals->success > 0)
+            ? ($totals->total_time / $totals->success)
+            : 0;
         
         return view('test-results.index', [
             'testResults' => $testResults,
             'perPage' => (int)$perPage,
             'startDate' => $startDate,
-            'endDate' => $endDate
+            'endDate' => $endDate,
+            'totalTests' => $totalTests,
+            'failedTests' => $failedTests,
+            'avgResponseTime' => $avgResponseTime,
+            'successRate' => $successRate
         ]);
     }
 
@@ -56,6 +94,7 @@ class TestResultController extends Controller
             'protocol' => $request->get('protocol', 'https'),
             'method' => $request->get('method', 'GET'),
             'concurrency_level' => $request->get('concurrency_level', 1),
+            'timeout' => $request->get('timeout', 60),
             'is_clone' => $request->has('clone'),
         ];
         
@@ -71,6 +110,69 @@ class TestResultController extends Controller
         }
         
         return view('test-results.create', ['old' => $defaults]);
+    }
+
+    public function bulkCreate()
+    {
+        return view('test-results.bulk');
+    }
+
+    public function bulkStore(Request $request)
+    {
+        $validated = $request->validate([
+            'urls' => 'required|string',
+            'method' => 'required|in:GET,POST,PUT,DELETE,PATCH',
+            'concurrency_level' => 'required|integer|min:1',
+            'timeout' => 'required|integer|min:1',
+            'final_headers' => 'required|json',
+            'request_body' => 'nullable|json',
+        ]);
+
+        $urls = preg_split('/\r\n|\r|\n/', $validated['urls']);
+        $urls = array_filter(array_map('trim', $urls));
+
+        if (empty($urls)) {
+            return back()->withErrors(['urls' => 'Please enter at least one valid URL.'])->withInput();
+        }
+
+        $headers = json_decode($validated['final_headers'], true);
+        $body = !empty($validated['request_body']) ? json_decode($validated['request_body'], true) : null;
+
+        foreach ($urls as $url) {
+            // Determine protocol and clean URL
+            $protocol = 'https';
+            if (preg_match('#^https?://#', $url, $matches)) {
+                $protocol = trim($matches[0], ':/');
+                $url = preg_replace('#^https?://#', '', $url);
+            }
+            $url = trim($url, '/');
+
+            if (empty($url)) continue;
+
+            $testResult = TestResult::create([
+                'url' => $url,
+                'protocol' => $protocol,
+                'method' => $validated['method'],
+                'concurrency_level' => $validated['concurrency_level'],
+                'timeout' => $validated['timeout'],
+                'request_headers' => $headers,
+                'request_body' => $body,
+                'status' => TestResult::STATUS_QUEUED,
+                'progress' => 0,
+                'total_requests' => 0,
+                'successful_requests' => 0,
+                'failed_requests' => 0,
+                'average_response_time' => 0,
+                'response_times' => [],
+                'error_details' => []
+            ]);
+
+            dispatch(function () use ($testResult) {
+                $this->runConcurrencyTest($testResult);
+            })->afterResponse();
+        }
+
+        return redirect()->route('test-results.index')->with('success', count($urls) . ' tests have been queued.');
     }
 
     public function store(Request $request)
@@ -100,6 +202,7 @@ class TestResultController extends Controller
             'protocol' => 'required|in:http,https',
             'method' => 'required|in:GET,POST,PUT,DELETE,PATCH',
             'concurrency_level' => 'required|integer|min:1',
+            'timeout' => 'required|integer|min:1',
             'final_headers' => 'required|json',
             'request_body' => 'nullable|json',
         ]);
@@ -243,8 +346,8 @@ class TestResultController extends Controller
             ]);
 
             $client = new Client([
-                'timeout' => 30,
-                'connect_timeout' => 10,
+                'timeout' => $testResult->timeout ?? 60,
+                'connect_timeout' => 30,
                 'http_errors' => false
             ]);
 
@@ -267,19 +370,33 @@ class TestResultController extends Controller
                 
                 // Create batch of requests
                 for ($j = $i; $j < $batchEnd; $j++) {
+                    $startTime = microtime(true);
                     $promises[] = $client->requestAsync(
                         $testResult->method,
                         $url,
                         [
                             'headers' => $testResult->request_headers,
                             'json' => $testResult->request_body,
+                            'on_stats' => function (\GuzzleHttp\TransferStats $stats) use (&$responseTimes, &$totalTime) {
+                                $time = $stats->getTransferTime();
+                                $response = $stats->getResponse();
+                                $statusCode = $response ? $response->getStatusCode() : 0;
+                                
+                                $responseTimes[] = [
+                                    'time' => $time,
+                                    'status' => $statusCode
+                                ];
+                                $totalTime += $time;
+                            }
                         ]
                     )->then(
-                        function ($response) use (&$responseTimes, &$successful, &$totalTime, $j) {
-                            $time = $response->getHeaderLine('total_time') ?: 0;
-                            $responseTimes[] = $time;
-                            $totalTime += $time;
-                            $successful++;
+                        function ($response) use (&$successful, &$failed) {
+                            $statusCode = $response->getStatusCode();
+                            if (in_array($statusCode, [200, 201])) {
+                                $successful++;
+                            } else {
+                                $failed++;
+                            }
                         },
                         function ($reason) use (&$errors, &$failed, $j) {
                             $errors[] = [

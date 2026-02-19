@@ -6,125 +6,111 @@
         <div class="w3-col m12">
             <div class="w3-card-4 w3-margin-top">
                 <div class="w3-container w3-padding-16">
-                    <h3 class="w3-large w3-padding-16 w3-border-bottom">Create New Test</h3>
+                    <h3 class="w3-center w3-padding-16"><i class="fa fa-plus-circle"></i> Create New Test</h3>
+                    
                     <form method="POST" action="{{ route('test-results.store') }}" class="w3-container">
                         @csrf
                         
-                        <!-- Main Form Section -->
                         <div class="w3-section">
-                            <!-- URL and Protocol -->
-                            <div class="w3-row-padding">
-                                <div class="w3-col m2 w3-padding-small">
-                                    <label for="protocol" class="w3-text-dark-grey">Protocol</label>
-                                    <select id="protocol" class="w3-select w3-border @error('protocol') w3-border-red @enderror" name="protocol" required>
-                                        <option value="http" {{ (old('protocol', $old['protocol'] ?? 'https') === 'http' ? 'selected' : '') }}>HTTP</option>
-                                        <option value="https" {{ (old('protocol', $old['protocol'] ?? 'https') === 'https' ? 'selected' : '') }}>HTTPS</option>
-                                    </select>
-                                    @error('protocol')
-                                        <div class="w3-text-red w3-small">{{ $message }}</div>
-                                    @enderror
+                            <!-- URL Section -->
+                            <div class="w3-row w3-section">
+                                <div class="w3-col" style="width:50px"><i class="w3-xxlarge fa fa-globe"></i></div>
+                                <div class="w3-rest">
+                                    <div class="w3-row">
+                                        <div class="w3-col s3">
+                                            <select class="w3-select w3-border" name="protocol" id="protocol" required>
+                                                <option value="http" {{ (old('protocol', $old['protocol'] ?? 'https') === 'http' ? 'selected' : '') }}>HTTP</option>
+                                                <option value="https" {{ (old('protocol', $old['protocol'] ?? 'https') === 'https' ? 'selected' : '') }}>HTTPS</option>
+                                            </select>
+                                        </div>
+                                        <div class="w3-col s9">
+                                            <input id="url" class="w3-input w3-border @error('url') w3-border-red @enderror" name="url" type="text" placeholder="URL (e.g. example.com/api)" value="{{ old('url', $old['url'] ?? '') }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="w3-small w3-text-grey">Enter the URL without protocol</div>
+                                    @error('url') <div class="w3-text-red w3-small">{{ $message }}</div> @enderror
                                 </div>
-                                
-                                <div class="w3-col m8 w3-padding-small">
-                                    <label for="url" class="w3-text-dark-grey">URL</label>
-                                    <input id="url" type="text" class="w3-input w3-border @error('url') w3-border-red @enderror" 
-                                           name="url" value="{{ old('url', $old['url'] ?? '') }}" required>
-                                    <div class="w3-small w3-text-grey">Enter the URL without protocol (e.g., example.com/api)</div>
-                                    @error('url')
-                                        <div class="w3-text-red w3-small">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                                
-                                <div class="w3-col m2 w3-padding-small">
-                                    <label for="method" class="w3-text-dark-grey">Method</label>
-                                    <select id="method" class="w3-select w3-border @error('method') w3-border-red @enderror" name="method" required>
-                                        <option value="GET" {{ (old('method', $old['method'] ?? '') === 'GET' ? 'selected' : '') }}>GET</option>
+                            </div>
+
+                            <!-- Method -->
+                            <div class="w3-row w3-section">
+                                <div class="w3-col" style="width:50px"><i class="w3-xxlarge fa fa-exchange"></i></div>
+                                <div class="w3-rest">
+                                    <select class="w3-select w3-border @error('method') w3-border-red @enderror" name="method" required>
+                                        <option value="GET" {{ (old('method', $old['method'] ?? 'GET') === 'GET' ? 'selected' : '') }}>GET</option>
                                         <option value="POST" {{ (old('method', $old['method'] ?? '') === 'POST' ? 'selected' : '') }}>POST</option>
                                         <option value="PUT" {{ (old('method', $old['method'] ?? '') === 'PUT' ? 'selected' : '') }}>PUT</option>
                                         <option value="DELETE" {{ (old('method', $old['method'] ?? '') === 'DELETE' ? 'selected' : '') }}>DELETE</option>
                                         <option value="PATCH" {{ (old('method', $old['method'] ?? '') === 'PATCH' ? 'selected' : '') }}>PATCH</option>
                                     </select>
-                                    @error('method')
-                                        <div class="w3-text-red w3-small">{{ $message }}</div>
-                                    @enderror
+                                    @error('method') <div class="w3-text-red w3-small">{{ $message }}</div> @enderror
                                 </div>
                             </div>
-                            
-                            <!-- Concurrency Level -->
-                            <div class="w3-row-padding">
-                                <div class="w3-col m3 w3-padding-small">
-                                    <label for="concurrency_level" class="w3-text-dark-grey">Concurrency Level</label>
-                                    <input id="concurrency_level" type="number" class="w3-input w3-border @error('concurrency_level') w3-border-red @enderror" 
-                                           name="concurrency_level" value="{{ old('concurrency_level', $old['concurrency_level'] ?? 1) }}" min="1" required>
-                                    @error('concurrency_level')
-                                        <div class="w3-text-red w3-small">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            
-                            <!-- Headers Section -->
-                            <div class="w3-panel w3-light-grey w3-padding-16 w3-round">
-                                <h4 class="w3-text-dark-grey">Request Headers</h4>
-                                
-                                <div class="w3-row-padding">
-                                    <div class="w3-col m4 w3-padding-small">
-                                        <label for="content_type" class="w3-text-dark-grey">Content Type</label>
-                                        <select id="content_type" class="w3-select w3-border">
-                                            <option value="application/json">application/json</option>
-                                            <option value="application/x-www-form-urlencoded">application/x-www-form-urlencoded</option>
-                                            <option value="multipart/form-data">multipart/form-data</option>
-                                            <option value="text/plain">text/plain</option>
-                                            <option value="text/html">text/html</option>
-                                            <option value="application/xml">application/xml</option>
-                                            <option value="">Custom</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="w3-col m8 w3-padding-small">
-                                        <label for="authorization" class="w3-text-dark-grey">Authorization</label>
-                                        <div class="w3-input-group">
-                                            <span class="w3-input-group-label">Bearer</span>
-                                            <input type="text" id="authorization" class="w3-input" placeholder="Enter token">
+
+                            <!-- Concurrency & Timeout -->
+                            <div class="w3-row w3-section">
+                                <div class="w3-col" style="width:50px"><i class="w3-xxlarge fa fa-users"></i></div>
+                                <div class="w3-rest">
+                                    <div class="w3-row-padding" style="margin:0 -16px">
+                                        <div class="w3-half">
+                                            <label class="w3-text-grey w3-small">Concurrency</label>
+                                            <input class="w3-input w3-border @error('concurrency_level') w3-border-red @enderror" name="concurrency_level" type="number" placeholder="Concurrency Level" value="{{ old('concurrency_level', $old['concurrency_level'] ?? 1) }}" min="1" required>
+                                        </div>
+                                        <div class="w3-half">
+                                            <label class="w3-text-grey w3-small">Timeout (seconds)</label>
+                                            <input class="w3-input w3-border @error('timeout') w3-border-red @enderror" name="timeout" type="number" placeholder="Timeout (seconds)" value="{{ old('timeout', $old['timeout'] ?? 60) }}" min="1" required>
                                         </div>
                                     </div>
-                                </div>
-                                
-                                <div class="w3-padding-small">
-                                    <label for="request_headers" class="w3-text-dark-grey">Additional Headers (JSON)</label>
-                                    <textarea id="request_headers" class="w3-input w3-border @error('request_headers') w3-border-red @enderror" 
-                                             name="request_headers" rows="3" style="resize: vertical;">{{ old('request_headers', '{}') }}</textarea>
-                                    <div class="w3-small w3-text-grey">Example: {"X-Custom-Header": "value"}</div>
-                                    @error('request_headers')
-                                        <div class="w3-text-red w3-small">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                                
-                                <!-- Headers Preview -->
-                                <div class="w3-padding-small">
-                                    <label class="w3-text-dark-grey">Headers Preview</label>
-                                    <div class="w3-panel w3-border w3-light-grey w3-padding w3-small" style="max-height: 120px; overflow-y: auto;">
-                                        <pre id="headers_preview" style="margin: 0; white-space: pre-wrap; word-wrap: break-word;">{}</pre>
-                                    </div>
-                                    <input type="hidden" name="final_headers" id="final_headers" value='{{ old('final_headers', '{}') }}'>
+                                    @error('concurrency_level') <div class="w3-text-red w3-small">{{ $message }}</div> @enderror
+                                    @error('timeout') <div class="w3-text-red w3-small">{{ $message }}</div> @enderror
                                 </div>
                             </div>
-                            
-                            <!-- Request Body -->
-                            <div class="w3-padding-small">
-                                <label for="request_body" class="w3-text-dark-grey">Request Body (JSON)</label>
-                                <textarea id="request_body" class="w3-input w3-border @error('request_body') w3-border-red @enderror" 
-                                         name="request_body" rows="6" style="resize: vertical;">{{ old('request_body', $old['request_body'] ?? '') }}</textarea>
-                                @error('request_body')
-                                    <div class="w3-text-red w3-small">{{ $message }}</div>
-                                @enderror
+
+                            <!-- Headers Config -->
+                            <div class="w3-row w3-section">
+                                <div class="w3-col" style="width:50px"><i class="w3-xxlarge fa fa-list-ul"></i></div>
+                                <div class="w3-rest">
+                                     <div class="w3-card w3-light-grey w3-padding">
+                                        <p class="w3-small w3-margin-0">Headers Configuration</p>
+                                        <div class="w3-row">
+                                            <div class="w3-col s4">
+                                                <select id="content_type" class="w3-select w3-border w3-tiny">
+                                                    <option value="" disabled selected>Content Type</option>
+                                                    <option value="application/json">application/json</option>
+                                                    <option value="application/x-www-form-urlencoded">form-urlencoded</option>
+                                                    <option value="multipart/form-data">multipart/form-data</option>
+                                                </select>
+                                            </div>
+                                            <div class="w3-col s8">
+                                                <input type="text" id="authorization" class="w3-input w3-border w3-tiny" placeholder="Bearer Token">
+                                            </div>
+                                        </div>
+                                        <textarea id="request_headers" class="w3-input w3-border w3-margin-top w3-tiny" 
+                                                  name="request_headers" rows="2" placeholder='Additional JSON Headers: {"X-Key": "Value"}'>{{ old('request_headers', $old['request_headers'] ?? '{}') }}</textarea>
+                                        
+                                        <div class="w3-padding-small">
+                                            <label class="w3-text-dark-grey w3-tiny">Preview</label>
+                                            <div class="w3-panel w3-border w3-white w3-padding w3-tiny" style="max-height: 80px; overflow-y: auto;">
+                                                <pre id="headers_preview" style="margin: 0; white-space: pre-wrap;">{}</pre>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" name="final_headers" id="final_headers" value='{{ old('final_headers', '{}') }}'>
+                                     </div>
+                                </div>
                             </div>
-                            
-                            <!-- Form Actions -->
-                            <div class="w3-padding-16 w3-border-top">
-                                <a href="{{ route('test-results.index') }}" class="w3-button w3-light-grey w3-margin-right">Cancel</a>
-                                <button type="submit" class="w3-button w3-blue">
-                                    <i class="fa fa-play"></i> Start Test
-                                </button>
+
+                            <!-- Body -->
+                            <div class="w3-row w3-section">
+                                <div class="w3-col" style="width:50px"><i class="w3-xxlarge fa fa-file-code-o"></i></div>
+                                <div class="w3-rest">
+                                    <textarea class="w3-input w3-border @error('request_body') w3-border-red @enderror" name="request_body" rows="6" placeholder="Request Body (JSON)">{{ old('request_body', $old['request_body'] ?? '') }}</textarea>
+                                    @error('request_body') <div class="w3-text-red w3-small">{{ $message }}</div> @enderror
+                                </div>
+                            </div>
+
+                            <div class="w3-center w3-padding-16">
+                                <a href="{{ route('test-results.index') }}" class="w3-button w3-red w3-margin-right">Cancel</a>
+                                <button type="submit" class="w3-button w3-blue w3-ripple"><i class="fa fa-play"></i> Start Test</button>
                             </div>
                         </div>
                     </form>
