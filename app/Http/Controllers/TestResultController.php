@@ -89,24 +89,31 @@ class TestResultController extends Controller
 
     public function create(Request $request)
     {
+        $testResultId = $request->get('test_result_id');
+        $originalTest = $testResultId ? TestResult::find($testResultId) : null;
+
         $defaults = [
-            'url' => $request->get('url', ''),
-            'protocol' => $request->get('protocol', 'https'),
-            'method' => $request->get('method', 'GET'),
-            'concurrency_level' => $request->get('concurrency_level', 1),
-            'timeout' => $request->get('timeout', 60),
+            'url' => $request->get('url', $originalTest->url ?? ''),
+            'protocol' => $request->get('protocol', $originalTest->protocol ?? 'https'),
+            'method' => $request->get('method', $originalTest->method ?? 'GET'),
+            'concurrency_level' => $request->get('concurrency_level', $originalTest->concurrency_level ?? 1),
+            'timeout' => $request->get('timeout', $originalTest->timeout ?? 60),
             'is_clone' => $request->has('clone'),
         ];
         
-        // If this is a clone, we'll also include the request headers and body
-        if ($request->has('clone') && $request->has('test_result_id')) {
-            $originalTest = TestResult::find($request->get('test_result_id'));
-            if ($originalTest) {
-                $defaults['request_headers'] = json_encode($originalTest->request_headers, JSON_PRETTY_PRINT);
-                $defaults['request_body'] = is_array($originalTest->request_body) 
-                    ? json_encode($originalTest->request_body, JSON_PRETTY_PRINT) 
-                    : $originalTest->request_body;
-            }
+        // Include the request headers and body from original test if available
+        if ($originalTest) {
+            $defaults['request_headers'] = json_encode($originalTest->request_headers, JSON_PRETTY_PRINT);
+            $defaults['request_body'] = is_array($originalTest->request_body) 
+                ? json_encode($originalTest->request_body, JSON_PRETTY_PRINT) 
+                : $originalTest->request_body;
+            
+            // Also ensure url/protocol etc are correctly set if they weren't explicitly in request
+            $defaults['url'] = $originalTest->url;
+            $defaults['protocol'] = $originalTest->protocol;
+            $defaults['method'] = $originalTest->method;
+            $defaults['concurrency_level'] = $originalTest->concurrency_level;
+            $defaults['timeout'] = $originalTest->timeout;
         }
         
         return view('test-results.create', ['old' => $defaults]);
@@ -261,10 +268,15 @@ class TestResultController extends Controller
         
         // Add per_page to the paginator's query parameters
         $paginatedResponseTimes->appends(['per_page' => $perPage]);
-        
+
+        $previousId = TestResult::where('id', '<', $testResult->id)->max('id');
+        $nextId = TestResult::where('id', '>', $testResult->id)->min('id');
+
         return view('test-results.show', [
             'testResult' => $testResult,
-            'paginatedResponseTimes' => $paginatedResponseTimes
+            'paginatedResponseTimes' => $paginatedResponseTimes,
+            'previousId' => $previousId,
+            'nextId' => $nextId
         ]);
     }
 
@@ -308,6 +320,52 @@ class TestResultController extends Controller
     {
         $pdf = PDF::loadView('test-results.pdf', compact('testResult'));
         return $pdf->download('test-result-' . $testResult->id . '.pdf');
+    }
+
+    /**
+     * Export dashboard results to PDF.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Barryvdh\DomPDF\PDF
+     */
+    public function dashboardPdf(Request $request)
+    {
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        
+        $query = TestResult::query();
+        if ($startDate) $query->whereDate('created_at', '>=', $startDate);
+        if ($endDate) $query->whereDate('created_at', '<=', $endDate);
+        
+        $testResults = $query->orderBy('id', 'desc')->get();
+        
+        // Calculate statistics (same logic as index)
+        $totalTests = $testResults->count();
+        $failedTests = $testResults->filter(function($t) {
+            return $t->status === TestResult::STATUS_FAILED || $t->failed_requests > 0;
+        })->count();
+        
+        $completedTests = $testResults->where('status', TestResult::STATUS_COMPLETED);
+        $totalSuccess = $completedTests->sum('successful_requests');
+        $totalAll = $completedTests->sum('total_requests');
+        $totalTimeWeighted = $completedTests->sum(function($t) {
+            return $t->average_response_time * $t->successful_requests;
+        });
+
+        $successRate = $totalAll > 0 ? ($totalSuccess / $totalAll) * 100 : 0;
+        $avgResponseTime = $totalSuccess > 0 ? ($totalTimeWeighted / $totalSuccess) : 0;
+
+        $pdf = PDF::loadView('test-results.dashboard_pdf', [
+            'testResults' => $testResults,
+            'totalTests' => $totalTests,
+            'failedTests' => $failedTests,
+            'avgResponseTime' => $avgResponseTime,
+            'successRate' => $successRate,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('dashboard-report-' . now()->format('Y-m-d-H-i-s') . '.pdf');
     }
     
     public function status(TestResult $testResult)

@@ -15,9 +15,7 @@
     <div class="w3-quarter">
       <div class="w3-container w3-blue w3-padding-16">
         <div class="w3-left"><i class="fa fa-check-circle w3-xxxlarge"></i></div>
-        <div class="w3-right">
-          <h3>{{ number_format($successRate, 1) }}%</h3>
-        </div>
+          <h3>{{ number_format($successRate, 2) }}%</h3>
         <div class="w3-clear"></div>
         <h4>Success Rate</h4>
       </div>
@@ -52,12 +50,23 @@
         <!-- Action Bar -->
         <div class="w3-bar w3-light-grey w3-round w3-padding-small w3-margin-bottom">
             <a href="{{ route('test-results.create') }}" class="w3-bar-item w3-button w3-blue w3-round"><i class="fa fa-plus"></i> New Test</a>
-            <form id="exportForm" action="{{ route('test-results.export') }}" method="POST" class="w3-bar-item w3-right">
-                @csrf
-                <input type="hidden" name="start_date" value="{{ request('start_date') }}">
-                <input type="hidden" name="end_date" value="{{ request('end_date') }}">
-                <button type="submit" class="w3-button w3-green w3-round w3-small"><i class="fa fa-file-excel-o"></i> Export</button>
-            </form>
+            
+            <div class="w3-bar-item w3-right">
+                <form action="{{ route('test-results.index') }}" method="GET" style="display:inline-block;">
+                    <input type="date" name="start_date" value="{{ request('start_date') }}" class="w3-input w3-border w3-round-small w3-tiny" style="display:inline-block; width:auto; padding:5px;">
+                    <input type="date" name="end_date" value="{{ request('end_date') }}" class="w3-input w3-border w3-round-small w3-tiny" style="display:inline-block; width:auto; padding:5px;">
+                    <button type="submit" class="w3-button w3-theme w3-round w3-small"><i class="fa fa-filter"></i></button>
+                </form>
+                
+                <form id="exportForm" action="{{ route('test-results.export') }}" method="POST" style="display:inline-block;">
+                    @csrf
+                    <input type="hidden" name="start_date" value="{{ request('start_date') }}">
+                    <input type="hidden" name="end_date" value="{{ request('end_date') }}">
+                    <button type="submit" class="w3-button w3-green w3-round w3-small" title="Export to Excel"><i class="fa fa-file-excel-o"></i></button>
+                </form>
+                
+                <a href="{{ route('test-results.dashboard.pdf', ['start_date' => request('start_date'), 'end_date' => request('end_date')]) }}" class="w3-button w3-red w3-round w3-small" title="Download PDF Report"><i class="fa fa-file-pdf-o"></i></a>
+            </div>
         </div>
 
         <table class="w3-table w3-striped w3-white">
@@ -92,7 +101,7 @@
                 <div class="w3-grey w3-round-large" style="height: 12px; width: 100px; position:relative;">
                     <div class="w3-container w3-green w3-round-large" style="width:{{ $result->success_rate }}%; height: 12px; padding:0;"></div>
                 </div>
-                <div class="w3-tiny w3-text-grey">{{ number_format($result->success_rate) }}%</div>
+                <div class="w3-tiny w3-text-grey">{{ number_format($result->success_rate, 2) }}%</div>
               </td>
               <td>{{ is_numeric($result->average_response_time) ? number_format($result->average_response_time, 2) . 's' : '-' }}</td>
               <td><i class="fa fa-calendar"></i> {{ $result->created_at->format('M d, H:i') }}</td>
